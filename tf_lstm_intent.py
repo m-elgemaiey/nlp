@@ -10,36 +10,32 @@ intents = []
 intent_set = set()
 
 #with open('demo-rasa.json') as json_file:
-with open('nlu_training.json') as json_file:
+with open('data/nlu_training.json') as json_file:
     json_data = json.load(json_file)
     examples = json_data['rasa_nlu_data']['common_examples']
     for example in examples:
         sentences.append(example['text'])
         intents.append(example['intent'])
         intent_set.add(example['intent'])
-#print(intents)
-#print(sentences)
-print(len(intent_set))
-print(len(intents))
+
 intent_dict = {value:i for i, value in enumerate(intent_set)}
 intent__rev_dict = {i:value for i, value in enumerate(intent_set)}
-#print(intent_dict)
-
 
 time_steps=7
 #hidden LSTM units
 num_units=128
-#rows of 28 pixels
+#Word vector size
 n_input=300
 #learning rate for adam
 learning_rate=0.001
-#mnist is meant to be classified in 10 classes(0-9).
+# number of intents.
 n_classes=len(intent_set)
 #size of batch
 batch_size=len(intents)
 
 print("# Classes: {0}, Batch size: {1}".format(n_classes, batch_size))
 # spacy stuff
+print('Loading spacy model ...')
 nlp = spacy.load('en_core_web_md')
 
 def genTrainingData(sentences, intents):
@@ -68,8 +64,6 @@ test_intents = ['greet', 'show', 'greet', 'greet']
 
 test_x, test_y = genTrainingData(test_sents, test_intents)
 
-#print('input_x', input_x)
-#print('input_y', input_y)
 #weights and biases of appropriate shape to accomplish above task
 out_weights=tf.Variable(tf.random_normal([num_units,n_classes]))
 out_bias=tf.Variable(tf.random_normal([n_classes]))
@@ -103,22 +97,19 @@ accuracy=tf.reduce_mean(tf.cast(correct_prediction,tf.float32))
 init=tf.global_variables_initializer()
 with tf.Session() as sess:
     sess.run(init)
+    print('iter', 'accuracy', 'loss', sep = '\t')
     iter=1
-    while iter<200:
+    while iter<=200:
         sess.run(opt, feed_dict={x: train_x, y: train_y})
 
         if iter %10==0:
             acc=sess.run(accuracy,feed_dict={x:train_x,y:train_y})
             los=sess.run(loss,feed_dict={x:train_x,y:train_y})
-            print("For iter ",iter)
-            print("Accuracy ",acc)
-            print("Loss ",los)
-            print("__________________")
+            print(iter, acc, los, sep = '\t')
 
         iter=iter+1
     acc, pred = sess.run([accuracy, prediction], feed_dict={x: test_x, y: test_y})
     print("Testing Accuracy:", acc)
-    print('Expexted\tActual\tSentence')
+    print('Expect\tActual\tSentence')
     for i in range(len(test_sents)):
-        print(np.max(pred[i]), test_intents[i], intent__rev_dict[np.argmax(pred[i])], test_sents[i],sep='\t')
-    #print(intent_dict)
+        print(test_intents[i], intent__rev_dict[np.argmax(pred[i])], test_sents[i],sep='\t')
