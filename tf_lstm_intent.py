@@ -1,22 +1,10 @@
 import spacy
-import json
 import tensorflow as tf
 from tensorflow.contrib import rnn
 import numpy as np
+import utils as utils
 
-
-sentences = []
-intents = []
-intent_set = set()
-
-#with open('demo-rasa.json') as json_file:
-with open('data/nlu_training.json') as json_file:
-    json_data = json.load(json_file)
-    examples = json_data['rasa_nlu_data']['common_examples']
-    for example in examples:
-        sentences.append(example['text'])
-        intents.append(example['intent'])
-        intent_set.add(example['intent'])
+sentences, intents, intent_set = utils.load_intents('data/nlu_training.json')
 
 intent_dict = {value:i for i, value in enumerate(intent_set)}
 intent__rev_dict = {i:value for i, value in enumerate(intent_set)}
@@ -108,8 +96,9 @@ with tf.Session() as sess:
             print(iter, acc, los, sep = '\t')
 
         iter=iter+1
+        
     acc, pred = sess.run([accuracy, prediction], feed_dict={x: test_x, y: test_y})
-    print("Testing Accuracy:", acc)
     print('Expect\tActual\tSentence')
     for i in range(len(test_sents)):
         print(test_intents[i], intent__rev_dict[np.argmax(pred[i])], test_sents[i],sep='\t')
+    print("Testing Accuracy:", acc)
