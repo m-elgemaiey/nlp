@@ -3,19 +3,9 @@ import json
 import tensorflow as tf
 from tensorflow.contrib import rnn
 import numpy as np
+import utils
 
-entity_set = set()
-
-with open('nlu_training.json') as json_file:
-    json_data = json.load(json_file)
-    examples = json_data['rasa_nlu_data']['common_examples']
-    for example in examples:
-        entities = example['entities']
-        if entities:
-            for entity in entities:
-                entity_set.add(entity['entity'])
-
-#print(entity_set)
+examples, entity_set = utils.load_entities('data/nlu_training.json')
 
 entity_dict = {value:i+1 for i, value in enumerate(entity_set)}
 entity_rev_dict = {i+1:value for i, value in enumerate(entity_set)}
@@ -40,8 +30,7 @@ batch_size=len(examples)
 print("Batch size: {0}, Steps: {1}, # Classes: {2}, ".format( batch_size, time_steps, n_classes))
 # spacy stuff
 
-print("Loading spacy model")
-nlp = spacy.load('en_core_web_md')
+nlp = utils.load_spacy()
 
 def genTrainingData(examples):
     num_sentences = len(examples)
@@ -123,7 +112,7 @@ init=tf.global_variables_initializer()
 with tf.Session() as sess:
     sess.run(init)
     iter=1
-    while iter<800:
+    while iter<=800:
         sess.run(opt, feed_dict={x: train_x, y: train_y})
 
         if iter %10==0:
@@ -134,8 +123,6 @@ with tf.Session() as sess:
 
     pred = sess.run(prediction, feed_dict={x: train_x, y: train_y})
     shaped_pred = np.reshape(pred, (batch_size, time_steps))
-    #print("Prediction:", shaped_pred)
-    #print(len(shaped_pred))
     
     for i in range(len(examples)):
         print(examples[i]['text'])
